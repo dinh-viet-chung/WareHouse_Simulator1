@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
-using UnityEngine.InputSystem; // Giữ lại hệ thống Input mới của bạn
-using UnityEngine.SceneManagement; // Thêm vào để chuyển Scene
-using TMPro; // Thêm vào để điều khiển chữ UI
+using UnityEngine.InputSystem; // Keep your new Input System
+using UnityEngine.SceneManagement; // Added for Scene transition
+using TMPro; // Added for UI Text control
 
 /// <summary>
 /// Moves forward/backward and rotates with WASD/Arrow keys.
@@ -15,8 +15,8 @@ public class PlayerController : MonoBehaviour
     [Tooltip("Turn speed (degrees/sec).")]
     public float rotationSpeed = 120.0f;
 
-    [Tooltip("Kéo thả Text UI từ Canvas vào đây.")]
-    public TMP_Text statusText; // Thêm biến hiển thị UI Tiền/Ngày
+    [Tooltip("Drag and drop the Text UI from the Canvas here.")]
+    public TMP_Text statusText; // Added variable to display Money/Day UI
 
     private Rigidbody rb;
 
@@ -25,13 +25,13 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         if (rb == null) Debug.LogWarning("PlayerController needs a Rigidbody.");
 
-        // Cập nhật giao diện ngay khi vừa vào game từ dữ liệu đã lưu
+        // Update the interface right upon entering the game using saved data
         UpdateUI();
     }
 
     private void FixedUpdate()
     {
-        // Nếu không có bàn phím kết nối, bỏ qua để tránh lỗi crash game
+        // If there is no keyboard connected, skip to prevent game crash
         if (Keyboard.current == null) return;
 
         Vector2 moveInput = Vector2.zero;
@@ -58,7 +58,7 @@ public class PlayerController : MonoBehaviour
         rb.MoveRotation(rb.rotation * turnRotation);
     }
 
-    // Hàm cập nhật chuỗi hiển thị Tiền và Ngày
+    // Function to update the displayed text string for Money and Day
     private void UpdateUI()
     {
         if (statusText != null)
@@ -67,10 +67,10 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // Xử lý va chạm Trigger để đổi Scene sang nhà kho
+    // Handle Trigger collision to change Scene to the warehouse
     private void OnTriggerEnter(Collider other)
     {
-        // Khi nhân vật đi xuyên qua vùng tàng hình có tên ChangeSceneTrigger
+        // When the character passes through the invisible area named ChangeSceneTrigger
         if (other.gameObject.name == "ChangeSceneTrigger")
         {
             SceneManager.LoadScene("Scene2_Warehouse");

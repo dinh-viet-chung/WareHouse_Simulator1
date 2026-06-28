@@ -11,11 +11,11 @@ public class ForkliftController : MonoBehaviour
     public float rotationSpeed = 150.0f;
     private Rigidbody rb;
 
-    [Header("Fork Lift Mechanism (Nâng Hạ)")]
-    public Transform forkVisual; // Kéo thả khối "Càng nâng" vào đây
-    public float minForkHeight = 0.0f; // Độ cao thấp nhất (Sát đất)
-    public float maxForkHeight = 2.0f; // Độ cao tối đa bắt buộc
-    public float liftSpeed = 1.0f;     // Tốc độ nâng hạ
+    [Header("Fork Lift Mechanism (Lift/Lower)")]
+    public Transform forkVisual; // Drag and drop the "Fork" visual object here
+    public float minForkHeight = 0.0f; // Lowest height (ground level)
+    public float maxForkHeight = 2.0f; // Required maximum height
+    public float liftSpeed = 1.0f;     // Lifting/lowering speed
 
     [Header("UI System")]
     public TMP_Text gameplayUIText;
@@ -23,45 +23,45 @@ public class ForkliftController : MonoBehaviour
     private float prepareTimer = 5.0f;
     private float workTimer = 60.0f;
 
-    // Các trạng thái của Game
+    // Game States
     private bool isPreparing = true;
     private bool isWorking = false;
     private bool isEnding = false;
 
-    // Quản lý Thùng hàng
-    private CargoBox currentBoxNear = null; // Thùng hàng đang đứng gần
-    private CargoBox attachedBox = null;    // Thùng hàng đang móc trên xe
+    // Cargo Management
+    private CargoBox currentBoxNear = null; // Cargo box currently standing near
+    private CargoBox attachedBox = null;    // Cargo box currently attached to the forklift
     private bool isBoxAttached = false;
-    private bool isInDropZone = false;       // Xe đang nằm trong ô đặt hàng hay không
+    private bool isInDropZone = false;       // Whether the forklift is in the drop zone
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
         if (forkVisual != null)
         {
-            // Cho càng nâng xuất phát ở vị trí thấp nhất
+            // Initialize the fork position at the lowest level
             forkVisual.localPosition = new Vector3(forkVisual.localPosition.x, minForkHeight, forkVisual.localPosition.z);
         }
     }
 
     void FixedUpdate()
     {
-        // Chỉ cho phép lái xe khi đang trong ca làm việc chính thức (isWorking == true)
+        // Only allow movement during the active work shift (isWorking == true)
         if (!isWorking) return;
         if (Keyboard.current == null) return;
 
-        // RÀNG BUỘC CHÍ MẠNG: Nếu đã móc hàng mà hàng CHƯA đạt độ cao tối đa -> Khóa di chuyển xe
+        // CRITICAL CONSTRAINT: If cargo is attached but has NOT reached max height -> Lock movement
         if (isBoxAttached)
         {
-            if (forkVisual.localPosition.y < maxForkHeight - 0.05f)
+            if (forkVisual.localPosition.y < maxForkHeight - 0.08f)
             {
-                // Dừng xe lại không cho đi tiếp
+                // Stop the vehicle from moving forward
                 rb.linearVelocity = Vector3.zero;
                 return;
             }
         }
 
-        // Nhận nút di chuyển WASD
+        // Get WASD / Arrow keys movement input
         Vector2 moveInput = Vector2.zero;
         if (Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed) moveInput.y = 1f;
         if (Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed) moveInput.y = -1f;
@@ -81,7 +81,7 @@ public class ForkliftController : MonoBehaviour
     {
         if (Mouse.current == null || Keyboard.current == null) return;
 
-        // 1. QUẢN LÝ THỜI GIAN VÀ TRẠNG THÁI CA LÀM VIỆC
+        // 1. TIME AND WORKSHIFT STATE MANAGEMENT
         if (isPreparing)
         {
             prepareTimer -= Time.deltaTime;
@@ -89,7 +89,7 @@ public class ForkliftController : MonoBehaviour
             if (prepareTimer <= 0)
             {
                 isPreparing = false;
-                isWorking = true; // Bắt đầu 60 giây làm việc!
+                isWorking = true; // Start the 60-second shift!
             }
         }
         else if (isWorking)
@@ -97,19 +97,19 @@ public class ForkliftController : MonoBehaviour
             workTimer -= Time.deltaTime;
             UpdateUI();
 
-            // XỬ LÝ NÂNG / HẠ HÀNG BẰNG CHUỘT
-            if (Mouse.current.leftButton.isPressed) // GIỮ CHUỘT TRÁI để nâng hàng lên
+            // LIFT / LOWER CARGO HANDLING VIA MOUSE
+            if (Mouse.current.leftButton.isPressed) // HOLD LEFT MOUSE to lift cargo up
             {
                 float newY = Mathf.Min(forkVisual.localPosition.y + liftSpeed * Time.deltaTime, maxForkHeight);
                 forkVisual.localPosition = new Vector3(forkVisual.localPosition.x, newY, forkVisual.localPosition.z);
             }
-            else if (Mouse.current.rightButton.isPressed) // GIỮ CHUỘT PHẢI để hạ hàng xuống
+            else if (Mouse.current.rightButton.isPressed) // HOLD RIGHT MOUSE to lower cargo down
             {
                 float newY = Mathf.Max(forkVisual.localPosition.y - liftSpeed * Time.deltaTime, minForkHeight);
                 forkVisual.localPosition = new Vector3(forkVisual.localPosition.x, newY, forkVisual.localPosition.z);
             }
 
-            // XỬ LÝ NHẤN PHÍM F ĐỂ MÓC / NHẢ HÀNG
+            // PRESS [F] TO ATTACH / DETACH CARGO
             if (Keyboard.current.fKey.wasPressedThisFrame)
             {
                 HandleAttachment();
@@ -123,18 +123,18 @@ public class ForkliftController : MonoBehaviour
         }
     }
 
-    // Logic Móc/Nhả hàng bằng nút [F]
+    // Attachment logic via [F] key
     void HandleAttachment()
     {
         if (!isBoxAttached)
         {
-            // Trường hợp 1: Chưa có hàng -> Nhấn F để MÓC NHẶT HÀNG
+            // Case 1: No cargo -> Press F to ATTACH/PICK UP CARGO
             if (currentBoxNear != null)
             {
                 attachedBox = currentBoxNear;
-                attachedBox.SetPickedUpColor(); // Đổi sang màu Đỏ
+                attachedBox.SetPickedUpColor(); // Change color to Red
 
-                // Dính vật lý thùng hàng vào càng nâng để nâng lên hạ xuống theo xe
+                // Parent the cargo box to the fork mechanism so it moves along with it
                 attachedBox.transform.SetParent(forkVisual);
 
                 isBoxAttached = true;
@@ -142,14 +142,14 @@ public class ForkliftController : MonoBehaviour
         }
         else
         {
-            // Trường hợp 2: Đang giữ hàng -> Nhấn F để NHẢ HÀNG
-            // Kiểm tra xe phải đang nằm trên ô đặt hàng (DropZone) và càng nâng đã hạ thấp xuống
+            // Case 2: Holding cargo -> Press F to DETACH/DROP CARGO
+            // Check if the forklift is within the DropZone and the fork is lowered to the ground
             if (isInDropZone && forkVisual.localPosition.y <= minForkHeight + 0.1f)
             {
-                attachedBox.transform.SetParent(null); // Bỏ dính khỏi xe
-                attachedBox.SetDroppedColor();         // Trả lại màu xanh
+                attachedBox.transform.SetParent(null); // Detach from the forklift
+                attachedBox.SetDroppedColor();         // Revert color back to Green
 
-                // Cộng tiền thưởng ngay lập tức
+                // Reward bonus immediately
                 DataManager.AddMoney(100);
 
                 attachedBox = null;
@@ -164,48 +164,48 @@ public class ForkliftController : MonoBehaviour
 
         if (isPreparing)
         {
-            gameplayUIText.text = "CHUẨN BỊ CA LÀM: " + Mathf.CeilToInt(prepareTimer) + "s\nTỔNG TIỀN: $" + DataManager.TotalMoney;
+            gameplayUIText.text = "PREPARING SHIFT: " + Mathf.CeilToInt(prepareTimer) + "s\nTOTAL MONEY: $" + DataManager.TotalMoney;
         }
         else if (isWorking)
         {
             string constraintWarning = "";
-            if (isBoxAttached && forkVisual.localPosition.y < maxForkHeight - 0.05f)
+            if (isBoxAttached && forkVisual.localPosition.y < maxForkHeight - 0.08f)
             {
-                constraintWarning = "\n<color=red>⚠️ HÃY GIỮ CHUỘT TRÁI NÂNG HÀNG LÊN TỐI ĐA ĐỂ DI CHUYỂN!</color>";
+                constraintWarning = "\n<color=red>⚠️ KEEP THE LEFT MOUSE! </color>";
             }
-            gameplayUIText.text = "THỜI GIAN: " + Mathf.CeilToInt(workTimer) + "s\nTỔNG TIỀN: $" + DataManager.TotalMoney + constraintWarning;
+            gameplayUIText.text = "TIME: " + Mathf.CeilToInt(workTimer) + "s\nMONEY: $" + DataManager.TotalMoney + constraintWarning;
         }
         else if (isEnding)
         {
-            gameplayUIText.text = "<color=yellow>KẾT THÚC NGÀY LÀM VIỆC!</color>\nTỔNG TIỀN ĐÃ LƯU: $" + DataManager.TotalMoney;
+            gameplayUIText.text = "<color=yellow>END OF WORKDAY!</color>\nMONEY: $" + DataManager.TotalMoney;
         }
     }
 
-    // Coroutine xử lý kết thúc ca làm, chờ 3 giây rồi tăng ngày, chuyển màn
+    // Coroutine to handle the end of workshift, wait 3 seconds, advance day count, and load Scene 1
     IEnumerator EndWorkShiftRoutine()
     {
         isWorking = false;
         isEnding = true;
-        rb.linearVelocity = Vector3.zero; // Khóa di chuyển xe nâng hoàn toàn
+        rb.linearVelocity = Vector3.zero; // Fully lock forklift movement
         UpdateUI();
 
-        yield return new WaitForSeconds(3.0f); // Chờ đúng 3 giây
+        yield return new WaitForSeconds(3.0f); // Wait for exactly 3 seconds
 
-        DataManager.AdvanceDay(); // Tăng biến ngày +1
-        SceneManager.LoadScene("Scene1_Home"); // Tự động load lại Scene 1
+        DataManager.AdvanceDay(); // Increment day count +1
+        SceneManager.LoadScene("Scene1_Home"); // Automatically reload Scene 1
     }
 
-    // Kiểm tra va chạm cảm ứng vùng nhặt hàng và ô đặt hàng
+    // Handle trigger interactions with cargo boxes and drop zone
     private void OnTriggerEnter(Collider other)
     {
-        // Chạm vào thùng hàng
+        // Approaching a cargo box
         CargoBox box = other.GetComponent<CargoBox>();
         if (box != null && !isBoxAttached)
         {
             currentBoxNear = box;
         }
 
-        // Chạm vào ô đặt hàng (Drop Zone)
+        // Entering the Drop Zone
         if (other.gameObject.name == "DropZone")
         {
             isInDropZone = true;
@@ -214,14 +214,14 @@ public class ForkliftController : MonoBehaviour
 
     private void OnTriggerExit(Collider other)
     {
-        // Rời xa thùng hàng
+        // Moving away from a cargo box
         CargoBox box = other.GetComponent<CargoBox>();
         if (box != null && currentBoxNear == box)
         {
             currentBoxNear = null;
         }
 
-        // Rời khỏi ô đặt hàng
+        // Leaving the Drop Zone
         if (other.gameObject.name == "DropZone")
         {
             isInDropZone = false;

@@ -2,41 +2,44 @@
 
 public static class DataManager
 {
-    //This key is used to save data to the computer's memory (PlayerPres).
+    // Keys used to save data to the computer's memory (PlayerPrefs).
     private const string MONEY_KEY = "TotalMoney";
     private const string DAY_KEY = "CurrentDay";
 
-    //The Money property (Can be read from anywhere, only modified within this class or via a function)
-    public static int TotalMoney
-    {
-        get => PlayerPrefs.GetInt(MONEY_KEY, 0); //The default value is 0 if there is no data.
-        private set => PlayerPrefs.SetInt(MONEY_KEY, value);
-    }
- 
+    // Public properties to READ data from anywhere
+    public static int TotalMoney => PlayerPrefs.GetInt(MONEY_KEY, 0);
+    public static int CurrentDay => PlayerPrefs.GetInt(DAY_KEY, 1);
 
-    public static int CurrentDay
-    {
-        get => PlayerPrefs.GetInt(DAY_KEY, 1); //The default first day is 1.
-        private set => PlayerPrefs.SetInt(DAY_KEY, value);
-    }
-
-    // Function to add money
+    // Explicit function to add money and force write to PlayerPrefs
     public static void AddMoney(int amount)
     {
-        TotalMoney += amount;
-        PlayerPrefs.Save(); // Save immediately to drive
+        int currentMoney = PlayerPrefs.GetInt(MONEY_KEY, 0);
+        int newMoney = currentMoney + amount;
+
+        PlayerPrefs.SetInt(MONEY_KEY, newMoney);
+        PlayerPrefs.Save(); // Force save immediately to disk
+
+        Debug.Log($"[DataManager] Added ${amount}. New Total: ${newMoney}");
     }
 
-    // The function increments the number of days by 1.
+    // Explicit function to advance day and force write to PlayerPrefs
     public static void AdvanceDay()
     {
-        CurrentDay += 1;
-        PlayerPrefs.Save();
+        int currentDay = PlayerPrefs.GetInt(DAY_KEY, 1);
+        int nextDay = currentDay + 1;
+
+        PlayerPrefs.SetInt(DAY_KEY, nextDay);
+        PlayerPrefs.Save(); // Force save immediately to disk
+
+        Debug.Log($"[DataManager] Day advanced to: {nextDay}");
     }
 
-    // Use this function if you want to reset the game from the beginning (Optional)
+    // Reset all game data (Optional)
     public static void ResetData()
     {
-        PlayerPrefs.DeleteAll();
+        PlayerPrefs.DeleteKey(MONEY_KEY);
+        PlayerPrefs.DeleteKey(DAY_KEY);
+        PlayerPrefs.Save();
+        Debug.Log("[DataManager] All data has been reset.");
     }
 }

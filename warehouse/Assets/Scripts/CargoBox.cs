@@ -1,29 +1,66 @@
 ﻿using UnityEngine;
 
+public enum BoxType { Blue, Yellow, Red }
+
 public class CargoBox : MonoBehaviour
 {
-    private MeshRenderer meshRenderer;
-    private Color originalColor = Color.green; // Original color: Green
+    [Header("Box Settings")]
+    public BoxType boxType = BoxType.Blue;
 
-    void Start()
+    [HideInInspector] public float originalMass = 1.0f;
+    private Material boxMaterial;
+    private Rigidbody rb;
+
+    void Awake()
     {
-        meshRenderer = GetComponent<MeshRenderer>();
-        if (meshRenderer != null)
+        rb = GetComponent<Rigidbody>();
+        if (rb == null) rb = gameObject.AddComponent<Rigidbody>();
+
+        // Cache the original mass set in Inspector
+        originalMass = rb.mass;
+
+        // Automatically set properties based on type
+        ConfigureBoxType();
+    }
+
+    private void ConfigureBoxType()
+    {
+        // Try to get material to change colors dynamically if needed
+        MeshRenderer renderer = GetComponent<MeshRenderer>();
+        if (renderer != null) boxMaterial = renderer.material;
+
+        switch (boxType)
         {
-            // Set the initial green color for the shipping container.
-            meshRenderer.material.color = originalColor;
+            case BoxType.Blue:
+                rb.mass = 1.0f;
+                if (boxMaterial != null) boxMaterial.color = Color.blue;
+                break;
+
+            case BoxType.Yellow:
+                rb.mass = 5.0f; // Make it heavy so it naturally affects physics if pushed
+                if (boxMaterial != null) boxMaterial.color = Color.yellow;
+                break;
+
+            case BoxType.Red:
+                rb.mass = 1.0f;
+                if (boxMaterial != null) boxMaterial.color = Color.red;
+                break;
         }
     }
 
-    // The function changes the color of the cargo container to red when it is chained/hooked to the vehicle.
+    // Visual feedback when forklift picks it up
     public void SetPickedUpColor()
     {
-        if (meshRenderer != null) meshRenderer.material.color = Color.red;
+        // Optional: change transparency or secondary color when attached
     }
 
-    // The function returns green when the item is released.
+    // Visual feedback when forklift drops it properly
     public void SetDroppedColor()
     {
-        if (meshRenderer != null) meshRenderer.material.color = originalColor;
+        if (boxMaterial != null)
+        {
+            // Turn it green to show it was successfully delivered
+            boxMaterial.color = Color.green;
+        }
     }
 }
